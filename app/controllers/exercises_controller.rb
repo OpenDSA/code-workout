@@ -3,7 +3,7 @@ class ExercisesController < ApplicationController
   require 'oauth/request_proxy/rack_request'
 
   load_and_authorize_resource
-  skip_authorize_resource only: :practice
+  skip_authorize_resource only: [:practice, :call_open_pop]
 
   #~ Action methods ...........................................................
   after_action :allow_iframe, only: [:practice, :embed]
@@ -691,6 +691,33 @@ class ExercisesController < ApplicationController
     redirect_to exercises_url, notice: 'Exercise was successfully destroyed.'
   end
 
+  #----------------------------------------------------------------------------
+  #Visualize EndPoint
+  def call_open_pop
+    require 'rest-client'
+    require 'json'
+    payload = {'exercise_id' => params[:exercise_id],
+            'code' => params[:code]
+    }
+
+    #request =  RestClient.post('https://192.168.33.10:9210/answers/solve',payload.to_json,content_type: :json)
+    #https_url = 'https://192.168.33.10:9210/answers/solve'
+    #http_url = 'http://192.168.33.10:3000/answers/solve'
+    http_url = 'https://opendsax.cs.vt.edu:9292/answers/solve'
+    request = RestClient::Request.execute(:method => :post,
+                                            :url => http_url,
+                                            :payload => payload.to_json,
+                                            :headers => {'Content-Type' => 'application/json'},
+					    :verify_ssl => OpenSSL::SSL::VERIFY_NONE)
+    trace = JSON.parse(request.body)
+    @openpop_results = trace
+
+    respond_to do |format|
+      format.json { render :json => trace}  # note, no :location or :status options
+    end
+
+  end
+  #----------------------------------------------------------------------------
   #~ Private instance methods .................................................
   private
 
